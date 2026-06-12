@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:get_it/get_it.dart';
+import 'package:project_flutter/feature/filmes/data/models/filmes_model.dart';
+import 'package:project_flutter/feature/filmes/presentation/controller/filmes_controller.dart';
 
 
 
@@ -45,7 +49,7 @@ const List<Movie> classicsMovies = [
 
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+   HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -54,6 +58,15 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentFeatured = 0;
   int _selectedNav = 0;
+
+  final finalController = GetIt.I<FilmesController>();
+
+  initState() {
+    super.initState();
+    final teste = finalController.getFilmesPopulares();
+    print('teste ${teste}');
+
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,77 +122,105 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildFeaturedCarousel() {
     return SizedBox(
       height: 380,
-      child: PageView.builder(
-        itemCount: featuredMovies.length,
-        onPageChanged: (i) => setState(() => _currentFeatured = i),
-        itemBuilder: (context, index) => _buildFeaturedCard(featuredMovies[index]),
-      ),
+      child: Observer(
+        builder: (_) {
+          final filmes = finalController.filmes;
+          if (filmes.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return PageView.builder(
+            itemCount: filmes.length,
+            onPageChanged: (index) => setState(() => _currentFeatured = index),
+            itemBuilder: (context, index) => _buildFeaturedCard(filmes[index]),
+          );
+        },
+      )
     );
   }
 
-  Widget _buildFeaturedCard(Movie movie) {
+  Widget _buildFeaturedCard(MovieModel movie) {
+    final title = movie.title ?? 'Título desconhecido';
+    final year = movie.releaseDate?.split('-').first ?? '----';
+    final rating = movie.voteAverage?.toStringAsFixed(1) ?? '0.0';
+    final language = movie.originalLanguage ?? '';
+    final imageUrl = movie.backdropPath != null && movie.backdropPath!.isNotEmpty
+        ? 'https://image.tmdb.org/t/p/w500${movie.backdropPath}'
+        : null;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Container(
-        decoration: BoxDecoration(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: SizedBox(
+        height: 380,
+        child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [movie.backdropColor, Color.lerp(movie.backdropColor, const Color(0xFF0A0A0F), 0.3)!, const Color(0xFF0A0A0F)],
-          ),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              top: -30, right: -30,
-              child: Container(width: 200, height: 200, decoration: BoxDecoration(shape: BoxShape.circle, color: movie.accentColor.withOpacity(0.07))),
-            ),
-            Positioned(
-              top: 20, right: 24,
-              child: Container(
-                width: 120, height: 170,
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: movie.accentColor.withOpacity(0.12), border: Border.all(color: movie.accentColor.withOpacity(0.3))),
-                child: Center(child: Text(movie.emoji, style: const TextStyle(fontSize: 56))),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: movie.accentColor.withOpacity(0.2), borderRadius: BorderRadius.circular(6), border: Border.all(color: movie.accentColor.withOpacity(0.5))),
-                    child: Text('DESTAQUE', style: TextStyle(color: movie.accentColor, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.5)),
-                  ),
-                  const SizedBox(height: 120),
-                  Text(movie.title, style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800, height: 1.1)),
-                  const SizedBox(height: 6),
-                  Row(children: [
-                    Text(movie.genre, style: const TextStyle(color: Color(0xFF8080A0), fontSize: 13)),
-                    const Text(' · ', style: TextStyle(color: Color(0xFF8080A0))),
-                    Text(movie.year, style: const TextStyle(color: Color(0xFF8080A0), fontSize: 13)),
-                  ]),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      _buildStarRating(movie.rating, movie.accentColor),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        decoration: BoxDecoration(color: movie.accentColor, borderRadius: BorderRadius.circular(12)),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(Icons.play_arrow_rounded, color: Color(0xFF0A0A0F), size: 18),
-                          const SizedBox(width: 4),
-                          const Text('Assistir', style: TextStyle(color: Color(0xFF0A0A0F), fontWeight: FontWeight.w800, fontSize: 13)),
-                        ]),
+          child: Container(
+            decoration: BoxDecoration(
+              image: imageUrl != null
+                  ? DecorationImage(
+                      image: NetworkImage(imageUrl),
+                      fit: BoxFit.cover,
+                      colorFilter: ColorFilter.mode(
+                        Colors.black.withOpacity(0.45),
+                        BlendMode.darken,
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    )
+                  : null,
+              color: const Color(0xFF1C1C27),
             ),
-          ],
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Positioned(
+                  top: -30,
+                  right: -30,
+                  child: Container(width: 200, height: 200, decoration: const BoxDecoration(shape: BoxShape.circle)),
+                ),
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.white)),
+                          child: const Text('DESTAQUE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.5, color: Colors.white)),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(title, style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800, height: 1.1)),
+                        const SizedBox(height: 6),
+                        Row(children: [
+                          Text('$rating/10', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                          const Text(' · ', style: TextStyle(color: Colors.white, fontSize: 13)),
+                          Text(language, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                        ]),
+                        const SizedBox(height: 8),
+                        Text(movie.overview ?? 'Sem descrição disponível', maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 12)),
+                        const SizedBox(height: 8),
+                        Text('Lançamento: $year', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                        const Spacer(flex: 1),
+                        Row(
+                          children: [
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                              decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: Colors.white70),
+                              child: Row(mainAxisSize: MainAxisSize.min, children: const [
+                                Icon(Icons.play_arrow_rounded, color: Color(0xFF0A0A0F), size: 18),
+                                SizedBox(width: 4),
+                                Text('Assistir', style: TextStyle(color: Color(0xFF0A0A0F), fontWeight: FontWeight.w800, fontSize: 13)),
+                              ]),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:project_flutter/feature/presentation/pages/home.dart';
+import 'package:project_flutter/core/injection/injection.dart';
+import 'package:project_flutter/feature/filmes/presentation/pages/home.dart';
 
 void main() {
+  setup();
   runApp(const MyApp());
 }
 
@@ -15,7 +17,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: .fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const HomeScreen()
+      home:  HomeScreen()
     );
   }
 }
